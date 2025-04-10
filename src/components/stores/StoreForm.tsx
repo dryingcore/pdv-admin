@@ -1,9 +1,17 @@
 import { useState } from 'react';
 import { Box, Button, Paper, TextField, Typography, CircularProgress, Alert } from '@mui/material';
-import InputMask from 'react-input-mask';
 import axios from 'axios';
 
 const unmaskCNPJ = (value: string) => value.replace(/[^\d]+/g, '');
+
+const maskCNPJ = (value: string) => {
+  const digits = unmaskCNPJ(value).slice(0, 14);
+  return digits
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2');
+};
 
 const isValidCNPJ = (cnpj: string): boolean => {
   cnpj = unmaskCNPJ(cnpj);
@@ -33,7 +41,6 @@ export const StoreForm = () => {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  // Campos preenchidos automaticamente
   const [razaoSocial, setRazaoSocial] = useState('');
   const [nomeFantasia, setNomeFantasia] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -41,8 +48,10 @@ export const StoreForm = () => {
   const [endereco, setEndereco] = useState('');
 
   const handleCnpjChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const masked = e.target.value;
+    const raw = e.target.value;
+    const masked = maskCNPJ(raw);
     const unmasked = unmaskCNPJ(masked);
+
     setCnpj(masked);
     setCnpjError(false);
     setSubmitError('');
@@ -87,17 +96,14 @@ export const StoreForm = () => {
         <TextField label="Nome da Operação" fullWidth />
 
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <InputMask mask="99.999.999/9999-99" value={cnpj} onChange={handleCnpjChange}>
-            {inputProps => (
-              <TextField
-                {...inputProps}
-                label="CNPJ"
-                fullWidth
-                error={cnpjError}
-                helperText={cnpjError ? 'CNPJ inválido' : ''}
-              />
-            )}
-          </InputMask>
+          <TextField
+            label="CNPJ"
+            fullWidth
+            value={cnpj}
+            onChange={handleCnpjChange}
+            error={cnpjError}
+            helperText={cnpjError ? 'CNPJ inválido' : ''}
+          />
           <TextField
             label="Razão Social"
             fullWidth
