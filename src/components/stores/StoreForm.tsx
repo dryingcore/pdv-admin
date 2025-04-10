@@ -1,6 +1,58 @@
-import { Box, Button, Paper, TextField, Typography } from '@mui/material';
+import { useState } from 'react';
+import { Box, Button, Paper, TextField, Typography, CircularProgress, Alert } from '@mui/material';
+import axios from 'axios';
+
+// Função simples de validação de CNPJ
+const isValidCNPJ = (cnpj: string): boolean => {
+  cnpj = cnpj.replace(/[^\d]+/g, '');
+  if (cnpj.length !== 14) return false;
+  if (/^(\d)\1+$/.test(cnpj)) return false;
+
+  let t = cnpj.length - 2;
+  let d = cnpj.substring(t);
+  let d1 = parseInt(d.charAt(0));
+  let d2 = parseInt(d.charAt(1));
+  let calc = (x: number) => {
+    let n = cnpj.substring(0, x);
+    let y = x - 7;
+    let s = 0;
+    let r = 0;
+    for (let i = x; i >= 1; i--) {
+      s += +n.charAt(x - i) * y--;
+      if (y < 2) y = 9;
+    }
+    r = 11 - (s % 11);
+    return r > 9 ? 0 : r;
+  };
+  return calc(t) === d1 && calc(t + 1) === d2;
+};
 
 export const StoreForm = () => {
+  const [cnpj, setCnpj] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [responseData, setResponseData] = useState<any | null>(null);
+
+  const handleSubmit = async () => {
+    setError('');
+    setResponseData(null);
+
+    if (!isValidCNPJ(cnpj)) {
+      setError('CNPJ inválido');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      setResponseData(response.data);
+    } catch (err) {
+      setError('Erro ao buscar dados do CNPJ na BrasilAPI');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" gutterBottom>
@@ -11,7 +63,14 @@ export const StoreForm = () => {
         <TextField label="Nome da Operação" fullWidth />
 
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField label="CNPJ" fullWidth />
+          <TextField
+            label="CNPJ"
+            fullWidth
+            value={cnpj}
+            onChange={e => setCnpj(e.target.value)}
+            error={!!error}
+            helperText={error}
+          />
           <TextField label="Razão Social" fullWidth />
         </Box>
 
@@ -31,8 +90,11 @@ export const StoreForm = () => {
           </Box>
         </Paper>
 
+        {loading && <CircularProgress />}
+        {responseData && <Alert severity="success">CNPJ encontrado: {responseData.razao_social}</Alert>}
+
         <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Button variant="contained" color="success">
+          <Button variant="contained" color="success" onClick={handleSubmit}>
             Salvar
           </Button>
         </Box>
