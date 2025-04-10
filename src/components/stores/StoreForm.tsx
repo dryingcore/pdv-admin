@@ -29,16 +29,24 @@ const isValidCNPJ = (cnpj: string): boolean => {
 
 export const StoreForm = () => {
   const [cnpj, setCnpj] = useState('');
-  const [error, setError] = useState('');
+  const [cnpjError, setCnpjError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [responseData, setResponseData] = useState<any | null>(null);
+  const [submitError, setSubmitError] = useState('');
+
+  const handleCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCnpj(value);
+    setCnpjError(value.length > 0 && !isValidCNPJ(value));
+  };
 
   const handleSubmit = async () => {
-    setError('');
+    setSubmitError('');
     setResponseData(null);
 
     if (!isValidCNPJ(cnpj)) {
-      setError('CNPJ inválido');
+      setCnpjError(true);
+      setSubmitError('CNPJ inválido');
       return;
     }
 
@@ -47,7 +55,7 @@ export const StoreForm = () => {
       const response = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
       setResponseData(response.data);
     } catch (err) {
-      setError('Erro ao buscar dados do CNPJ na BrasilAPI');
+      setSubmitError('Erro ao buscar dados do CNPJ na BrasilAPI');
     } finally {
       setLoading(false);
     }
@@ -67,9 +75,9 @@ export const StoreForm = () => {
             label="CNPJ"
             fullWidth
             value={cnpj}
-            onChange={e => setCnpj(e.target.value)}
-            error={!!error}
-            helperText={error}
+            onChange={handleCnpjChange}
+            error={cnpjError}
+            helperText={cnpjError ? 'CNPJ inválido' : ''}
           />
           <TextField label="Razão Social" fullWidth />
         </Box>
@@ -92,6 +100,7 @@ export const StoreForm = () => {
 
         {loading && <CircularProgress />}
         {responseData && <Alert severity="success">CNPJ encontrado: {responseData.razao_social}</Alert>}
+        {submitError && <Alert severity="error">{submitError}</Alert>}
 
         <Box sx={{ textAlign: 'center', mt: 2 }}>
           <Button variant="contained" color="success" onClick={handleSubmit}>
